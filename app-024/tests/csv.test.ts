@@ -1,6 +1,6 @@
 // CSV 解析/导出/导入预览测试
 import { describe, it, expect } from 'vitest';
-import { parseCSV, stringifyCSV, withBOM, rowToRiddle, importPreview, RIDDLE_CSV_HEADERS } from '../src/lib/csv';
+import { parseCSV, stringifyCSV, withBOM, rowToRiddle, riddleToRow, parseTags, importPreview, RIDDLE_CSV_HEADERS } from '../src/lib/csv';
 import type { Riddle } from '../src/types';
 
 function mk(surface: string, category: Riddle['category'] = 'char', no = 1): Riddle {
@@ -45,6 +45,44 @@ describe('stringifyCSV / withBOM', () => {
     const s = withBOM('a,b');
     expect(s.charCodeAt(0)).toBe(0xfeff);
     expect(s.slice(1)).toBe('a,b');
+  });
+});
+
+describe('riddleToRow 与表头对齐', () => {
+  const full: Riddle = {
+    id: 'x', no: 1, surface: '谜面A', answer: '谜底B', category: 'char', format: 'none',
+    author: '作者甲', source: '出处乙', difficulty: 3, ageGroup: 'child',
+    tags: ['儿童专区', '元宵'], note: '备注丙',
+    check: { verdict: 'pass', reasons: [], checkedAt: 0 },
+  };
+  it('列数与列序同 RIDDLE_CSV_HEADERS 一一对应', () => {
+    const row = riddleToRow(full);
+    expect(row).toHaveLength(RIDDLE_CSV_HEADERS.length);
+    // 谜面,谜底,谜目,谜格,作者,出处,难度,适用年龄,标签,备注
+    expect(row[4]).toBe('作者甲');
+    expect(row[5]).toBe('出处乙');
+    expect(row[6]).toBe(3);
+    expect(row[7]).toBe('儿童');
+    expect(row[8]).toBe('儿童专区、元宵');
+    expect(row[9]).toBe('备注丙');
+  });
+  it('导出 → 再导入回环不串列', () => {
+    const [row] = parseCSV(stringifyCSV([riddleToRow(full)]));
+    const p = rowToRiddle(row, RIDDLE_CSV_HEADERS);
+    expect(p.error).toBeUndefined();
+    expect(p.riddle).toMatchObject({
+      surface: '谜面A', answer: '谜底B', author: '作者甲', source: '出处乙',
+      difficulty: 3, ageGroup: 'child', tags: ['儿童专区', '元宵'], note: '备注丙',
+    });
+  });
+});
+
+describe('parseTags', () => {
+  it('顿号/逗号/竖线等分隔，去空格、丢空项', () => {
+    expect(parseTags('儿童专区、元宵')).toEqual(['儿童专区', '元宵']);
+    expect(parseTags(' 灯谜 , 元宵 | 原创 ')).toEqual(['灯谜', '元宵', '原创']);
+    expect(parseTags('a，b；c;d/e')).toEqual(['a', 'b', 'c', 'd', 'e']);
+    expect(parseTags('')).toEqual([]);
   });
 });
 

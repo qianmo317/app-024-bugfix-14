@@ -13,6 +13,7 @@ export function Onsite() {
   const [msg, setMsg] = useState<{ kind: 'ok' | 'warn' | 'bad'; text: string } | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
   const [winner, setWinner] = useState('');
+  const [winnerRef, setWinnerRef] = useState('');
   const [prize, setPrize] = useState(state.settings.prizes[0] ?? '');
   const [note, setNote] = useState('');
   const [bigScreen, setBigScreen] = useState(false);
@@ -52,11 +53,12 @@ export function Onsite() {
     await store.addRecord({
       riddleId: currentRiddle.id,
       winnerName: quick ? '' : winner.trim(),
+      winnerRef: quick ? undefined : winnerRef.trim() || undefined,
       prize: quick ? (state.settings.prizes[QUICK_PRIZE_IDX] ?? '') : prize,
       note: quick ? '长按快速登记' : note.trim() || undefined,
     });
     setMsg({ kind: 'ok', text: `谜号 ${currentRiddle.no} 已登记${quick ? '（快速登记）' : ` · ${winner.trim() || '匿名'} · ${prize}`}` });
-    if (!quick) { setWinner(''); setNote(''); }
+    if (!quick) { setWinner(''); setWinnerRef(''); setNote(''); }
     inputRef.current?.focus();
   };
 
@@ -142,6 +144,9 @@ export function Onsite() {
                 <div className="field-row">
                   <label className="field"><span>猜中者姓名</span>
                     <input className="input" value={winner} onChange={(e) => setWinner(e.target.value)} placeholder="可留空" />
+                  </label>
+                  <label className="field"><span>联系方式</span>
+                    <input className="input" value={winnerRef} onChange={(e) => setWinnerRef(e.target.value)} placeholder="可留空" />
                   </label>
                   <label className="field"><span>奖项</span>
                     <select className="input" value={prize} onChange={(e) => setPrize(e.target.value)}>

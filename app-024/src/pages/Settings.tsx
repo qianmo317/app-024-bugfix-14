@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useAppState } from '../ui/router';
 import { riddleToRow, stringifyCSV, withBOM, RIDDLE_CSV_HEADERS } from '../lib/csv';
-import { downloadText } from '../lib/format';
+import { downloadText, formatDateTime } from '../lib/format';
 import { exportFileName, store } from '../lib/store';
 
 export function Settings() {
@@ -32,9 +32,16 @@ export function Settings() {
   const exportRecords = () => {
     const rows = state.records.map((rec) => {
       const r = state.riddles.find((x) => x.id === rec.riddleId);
-      return [r?.no ?? '', r?.surface ?? '', r?.answer ?? '', rec.winnerName ?? '', rec.prize, rec.note ?? ''];
+      return [
+        r?.no ?? '', r?.surface ?? '', r?.answer ?? '',
+        rec.winnerName ?? '', rec.winnerRef ?? '', rec.prize,
+        rec.code ?? '', formatDateTime(rec.at), rec.note ?? '',
+      ];
     });
-    downloadText(exportFileName('现场登记', 'csv'), withBOM(stringifyCSV([['谜号', '谜面', '谜底', '猜中者', '奖项', '备注'], ...rows])));
+    downloadText(exportFileName('现场登记', 'csv'), withBOM(stringifyCSV([
+      ['谜号', '谜面', '谜底', '猜中者', '联系方式', '奖项', '兑奖号码', '登记时间', '备注'],
+      ...rows,
+    ])));
   };
 
   const clearRecords = async () => {

@@ -31,8 +31,10 @@ export function RiddleList() {
   const setF = (patch: Partial<RiddleFilters>) => { setFilters((f) => ({ ...f, ...patch })); setPage(0); };
 
   const doExport = () => {
-    downloadText(exportFileName('谜库', 'csv'), withBOM(stringifyCSV([RIDDLE_CSV_HEADERS, ...state.riddles.map(riddleToRow)])));
-    setNotice(`已导出 ${state.riddles.length} 条`);
+    // 有勾选时只导出选中项（保持库内顺序），否则导出全库
+    const list = selected.size ? selectedInAll : state.riddles;
+    downloadText(exportFileName('谜库', 'csv'), withBOM(stringifyCSV([RIDDLE_CSV_HEADERS, ...list.map(riddleToRow)])));
+    setNotice(selected.size ? `已导出选中的 ${list.length} 条` : `已导出全部 ${list.length} 条`);
   };
 
   const doScanDup = () => {
@@ -134,7 +136,7 @@ export function RiddleList() {
         <button className="btn btn-primary" disabled={!selected.size} onClick={() => navigate('#/print')}>
           🖨 批量出条{selected.size ? `（${selected.size}）` : ''}
         </button>
-        <button className="btn" onClick={doExport}>⬇ 导出 CSV</button>
+        <button className="btn" onClick={doExport}>⬇ 导出 CSV{selected.size ? `（选中 ${selected.size}）` : ''}</button>
         <button className="btn" onClick={doScanDup}>🔍 全库查重</button>
         <button className="btn" onClick={() => fileRef.current?.click()}>⬆ 导入 CSV</button>
         <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={(e) => onFile(e.target.files?.[0])} />

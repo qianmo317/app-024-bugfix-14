@@ -45,7 +45,12 @@ export function withBOM(csv: string): string {
 }
 
 export function riddleToRow(r: Riddle): (string | number)[] {
-  return [r.surface, r.answer, CATEGORY_LABEL[r.category], FORMAT_LABEL[r.format], r.source ?? '', r.author ?? '', r.note ?? '', r.ageGroup ? AGE_LABEL[r.ageGroup] : ''];
+  // 列序须与 RIDDLE_CSV_HEADERS 一一对应
+  return [
+    r.surface, r.answer, CATEGORY_LABEL[r.category], FORMAT_LABEL[r.format],
+    r.author ?? '', r.source ?? '', r.difficulty,
+    r.ageGroup ? AGE_LABEL[r.ageGroup] : '', r.tags.join('、'), r.note ?? '',
+  ];
 }
 
 export function parseDifficulty(v: string): 1 | 2 | 3 | null {
@@ -55,7 +60,8 @@ export function parseDifficulty(v: string): 1 | 2 | 3 | null {
 }
 
 export function parseTags(v: string): string[] {
-  return v ? v.split('、') : [];
+  // 与编辑页一致：顿号/逗号/竖线等均可分隔，去两头空格、丢空项
+  return v ? v.split(/[、,，/|；;]+/).map((t) => t.trim()).filter(Boolean) : [];
 }
 
 export interface ParsedRiddle {
