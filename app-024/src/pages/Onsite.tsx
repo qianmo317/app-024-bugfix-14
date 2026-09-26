@@ -13,6 +13,7 @@ export function Onsite() {
   const [msg, setMsg] = useState<{ kind: 'ok' | 'warn' | 'bad'; text: string } | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
   const [winner, setWinner] = useState('');
+  const [winnerRef, setWinnerRef] = useState('');
   const [prize, setPrize] = useState(state.settings.prizes[0] ?? '');
   const [note, setNote] = useState('');
   const [bigScreen, setBigScreen] = useState(false);
@@ -52,11 +53,12 @@ export function Onsite() {
     await store.addRecord({
       riddleId: currentRiddle.id,
       winnerName: quick ? '' : winner.trim(),
+      winnerRef: quick ? '' : winnerRef.trim(),
       prize: quick ? (state.settings.prizes[QUICK_PRIZE_IDX] ?? '') : prize,
       note: quick ? '长按快速登记' : note.trim() || undefined,
     });
     setMsg({ kind: 'ok', text: `谜号 ${currentRiddle.no} 已登记${quick ? '（快速登记）' : ` · ${winner.trim() || '匿名'} · ${prize}`}` });
-    if (!quick) { setWinner(''); setNote(''); }
+    if (!quick) { setWinner(''); setWinnerRef(''); setNote(''); }
     inputRef.current?.focus();
   };
 
@@ -135,13 +137,16 @@ export function Onsite() {
                 {recordsOfCurrent.length > 0 && (
                   <ul className="dup-list warn-text">
                     {recordsOfCurrent.map((r) => (
-                      <li key={r.id}>已有登记：{r.winnerName || '匿名'} · {r.prize} · {formatDateTime(r.at)}{r.code ? ` · ${r.code}` : ''}</li>
+                      <li key={r.id}>已有登记：{r.winnerName || '匿名'}{r.winnerRef ? ` · ${r.winnerRef}` : ''} · {r.prize} · {formatDateTime(r.at)}{r.code ? ` · ${r.code}` : ''}</li>
                     ))}
                   </ul>
                 )}
                 <div className="field-row">
                   <label className="field"><span>猜中者姓名</span>
                     <input className="input" value={winner} onChange={(e) => setWinner(e.target.value)} placeholder="可留空" />
+                  </label>
+                  <label className="field"><span>联系方式</span>
+                    <input className="input" value={winnerRef} onChange={(e) => setWinnerRef(e.target.value)} placeholder="手机号 / 工号" />
                   </label>
                   <label className="field"><span>奖项</span>
                     <select className="input" value={prize} onChange={(e) => setPrize(e.target.value)}>
@@ -189,7 +194,7 @@ export function Onsite() {
           ) : (
             <div className="table-wrap records-table">
               <table>
-                <thead><tr><th>谜号</th><th>猜中者</th><th>奖项</th><th>兑奖号</th><th>时间</th><th /></tr></thead>
+                <thead><tr><th>谜号</th><th>猜中者</th><th>奖项</th><th>联系方式</th><th>兑奖号</th><th>时间</th><th /></tr></thead>
                 <tbody>
                   {state.records.slice(0, 30).map((rec) => {
                     const r = state.riddles.find((x) => x.id === rec.riddleId);
@@ -198,6 +203,7 @@ export function Onsite() {
                         <td className="no-cell">{r?.no ?? '?'}</td>
                         <td>{rec.winnerName || '匿名'}</td>
                         <td>{rec.prize}</td>
+                        <td>{rec.winnerRef ?? ''}</td>
                         <td>{rec.code ?? ''}</td>
                         <td className="muted">{formatDateTime(rec.at)}</td>
                         <td><button className="btn btn-ghost btn-sm" onClick={() => void store.removeRecord(rec.id)}>删</button></td>

@@ -1,7 +1,7 @@
 // 设置：活动信息 / 打印默认 / 奖品预设 / 导入导出 / 清空
 import { useState } from 'react';
 import { useAppState } from '../ui/router';
-import { riddleToRow, stringifyCSV, withBOM, RIDDLE_CSV_HEADERS } from '../lib/csv';
+import { riddleToRow, recordToRow, stringifyCSV, withBOM, RIDDLE_CSV_HEADERS, ONSITE_CSV_HEADERS } from '../lib/csv';
 import { downloadText } from '../lib/format';
 import { exportFileName, store } from '../lib/store';
 
@@ -32,9 +32,9 @@ export function Settings() {
   const exportRecords = () => {
     const rows = state.records.map((rec) => {
       const r = state.riddles.find((x) => x.id === rec.riddleId);
-      return [r?.no ?? '', r?.surface ?? '', r?.answer ?? '', rec.winnerName ?? '', rec.prize, rec.note ?? ''];
+      return recordToRow(rec, r);
     });
-    downloadText(exportFileName('现场登记', 'csv'), withBOM(stringifyCSV([['谜号', '谜面', '谜底', '猜中者', '奖项', '备注'], ...rows])));
+    downloadText(exportFileName('现场登记', 'csv'), withBOM(stringifyCSV([ONSITE_CSV_HEADERS, ...rows])));
   };
 
   const clearRecords = async () => {

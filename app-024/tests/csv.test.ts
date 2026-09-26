@@ -1,7 +1,7 @@
 // CSV 解析/导出/导入预览测试
 import { describe, it, expect } from 'vitest';
-import { parseCSV, stringifyCSV, withBOM, rowToRiddle, importPreview, RIDDLE_CSV_HEADERS } from '../src/lib/csv';
-import type { Riddle } from '../src/types';
+import { parseCSV, stringifyCSV, withBOM, rowToRiddle, importPreview, riddleToRow, recordToRow, parseTags, RIDDLE_CSV_HEADERS, ONSITE_CSV_HEADERS } from '../src/lib/csv';
+import type { OnsiteRecord, Riddle } from '../src/types';
 
 function mk(surface: string, category: Riddle['category'] = 'char', no = 1): Riddle {
   return {
@@ -45,6 +45,62 @@ describe('stringifyCSV / withBOM', () => {
     const s = withBOM('a,b');
     expect(s.charCodeAt(0)).toBe(0xfeff);
     expect(s.slice(1)).toBe('a,b');
+  });
+});
+
+describe('riddleToRow / 表头一致', () => {
+  it('字段顺序与 RIDDLE_CSV_HEADERS 完全一致', () => {
+    const riddle: Riddle = {
+      ...mk('谜面', 'char', 12),
+      author: '张三',
+      source: '《灯谜集》',
+      difficulty: 3,
+      ageGroup: 'adult',
+      tags: ['节日', '地名'],
+      note: '内部备注',
+    };
+    expect(riddleToRow(riddle)).toEqual(['谜面', '告', '猜一字', '无格', '张三', '《灯谜集》', 3, '成人', '节日、地名', '内部备注']);
+  });
+
+  it('可按表头无损导回作者、出处、难度、标签和备注', () => {
+    const riddle: Riddle = {
+      ...mk('谜面', 'char', 12),
+      author: '张三',
+      source: '校刊',
+      difficulty: 3,
+      ageGroup: 'adult',
+      tags: ['节日', '地名'],
+      note: '内部备注',
+    };
+    const parsed = rowToRiddle(riddleToRow(riddle).map(String), RIDDLE_CSV_HEADERS);
+    expect(parsed.riddle).toMatchObject({
+      author: '张三', source: '校刊', difficulty: 3, ageGroup: 'adult',
+      tags: ['节日', '地名'], note: '内部备注',
+    });
+  });
+});
+
+describe('recordToRow / 表头一致', () => {
+  it('包含联系方式、兑奖号码与登记时间，且奖项紧跟猜中者之后', () => {
+    const at = new Date(2026, 1, 18, 20, 5).getTime();
+    const riddle = mk('谜面', 'char', 12);
+    const record: OnsiteRecord = {
+      id: 'rec1', riddleId: riddle.id, winnerName: '李四', winnerRef: '13800000000',
+      prize: '一等奖', at, code: 'DJ-0001', note: '代领',
+    };
+    expect(recordToRow(record, riddle)).toEqual([
+      12, '谜面', '告', '李四', '一等奖', '13800000000', 'DJ-0001', '2026-02-18 20:05', '代领',
+    ]);
+    expect(ONSITE_CSV_HEADERS).toEqual(['谜号', '谜面', '谜底', '猜中者', '奖项', '联系方式', '兑奖号码', '登记时间', '备注']);
+  });
+});
+
+describe('parseTags', () => {
+  it('支持顿号、中英文逗号、竖线和斜杠分隔', () => {
+    expect(parseTags('节日, 社区｜专题、儿童 / 党史')).toEqual(['节日', '社区', '专题', '儿童', '党史']);
+  });
+  it('去掉每个标签两端空格并忽略空标签', () => {
+    expect(parseTags('  节日  ，  ， | 社区 ')).toEqual(['节日', '社区']);
   });
 });
 

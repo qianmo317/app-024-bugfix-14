@@ -5,6 +5,7 @@ import { VerdictBadge } from '../ui/bits';
 import { validateRiddle, FORMAT_RULE_BRIEF, FORMAT_AUTO_CAPABILITY } from '../lib/validate';
 import { findSimilar } from '../lib/duplicates';
 import { CATEGORY_LABEL, FORMAT_LABEL, AGE_LABEL, type AgeGroup, type RiddleCategory, type RiddleFormat } from '../types';
+import { parseTags } from '../lib/csv';
 import { store } from '../lib/store';
 
 interface RiddleLite {
@@ -60,7 +61,7 @@ export function RiddleEdit({ id }: { id: string }) {
       source: draft.source.trim() || undefined,
       difficulty: draft.difficulty,
       ageGroup: draft.ageGroup || undefined,
-      tags: draft.tags.split(/[、,，/|]+/).map((s) => s.trim()).filter(Boolean),
+      tags: parseTags(draft.tags),
       note: draft.note.trim() || undefined,
     });
     setSaved(`已保存（谜号 ${savedR.no}）`);
@@ -139,7 +140,7 @@ export function RiddleEdit({ id }: { id: string }) {
                 {Object.entries(AGE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </label>
-            <label className="field"><span>标签（、分隔）</span><input className="input" value={draft.tags} onChange={(e) => set({ tags: e.target.value })} placeholder="儿童专区、党史主题" /></label>
+            <label className="field"><span>标签（、,，|｜分隔）</span><input className="input" value={draft.tags} onChange={(e) => set({ tags: e.target.value })} placeholder="儿童专区、党史主题" /></label>
           </div>
           <label className="field"><span>备注（不打印）</span><textarea className="input" rows={2} value={draft.note} onChange={(e) => set({ note: e.target.value })} /></label>
 

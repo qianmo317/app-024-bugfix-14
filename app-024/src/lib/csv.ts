@@ -1,9 +1,11 @@
 // CSV 解析/导出（UTF-8 with BOM，Excel 打开不乱码）
-import type { AgeGroup, Riddle, RiddleCategory, RiddleFormat } from '../types';
+import type { AgeGroup, OnsiteRecord, Riddle, RiddleCategory, RiddleFormat } from '../types';
 import { AGE_FROM_LABEL, CATEGORY_FROM_LABEL, FORMAT_FROM_LABEL, FORMAT_LABEL, CATEGORY_LABEL, AGE_LABEL } from '../types';
 import { normalizeText, similarity } from './normalize';
+import { formatDateTime } from './format';
 
 export const RIDDLE_CSV_HEADERS = ['谜面', '谜底', '谜目', '谜格', '作者', '出处', '难度', '适用年龄', '标签', '备注'];
+export const ONSITE_CSV_HEADERS = ['谜号', '谜面', '谜底', '猜中者', '奖项', '联系方式', '兑奖号码', '登记时间', '备注'];
 
 /** 解析 CSV：支持 BOM、CRLF、引号内逗号/换行/双引号转义 */
 export function parseCSV(text: string): string[][] {
@@ -45,7 +47,32 @@ export function withBOM(csv: string): string {
 }
 
 export function riddleToRow(r: Riddle): (string | number)[] {
-  return [r.surface, r.answer, CATEGORY_LABEL[r.category], FORMAT_LABEL[r.format], r.source ?? '', r.author ?? '', r.note ?? '', r.ageGroup ? AGE_LABEL[r.ageGroup] : ''];
+  return [
+    r.surface,
+    r.answer,
+    CATEGORY_LABEL[r.category],
+    FORMAT_LABEL[r.format],
+    r.author ?? '',
+    r.source ?? '',
+    r.difficulty,
+    r.ageGroup ? AGE_LABEL[r.ageGroup] : '',
+    r.tags.join('、'),
+    r.note ?? '',
+  ];
+}
+
+export function recordToRow(rec: OnsiteRecord, riddle?: Riddle): (string | number)[] {
+  return [
+    riddle?.no ?? '',
+    riddle?.surface ?? '',
+    riddle?.answer ?? '',
+    rec.winnerName ?? '',
+    rec.prize,
+    rec.winnerRef ?? '',
+    rec.code ?? '',
+    formatDateTime(rec.at),
+    rec.note ?? '',
+  ];
 }
 
 export function parseDifficulty(v: string): 1 | 2 | 3 | null {
@@ -55,7 +82,10 @@ export function parseDifficulty(v: string): 1 | 2 | 3 | null {
 }
 
 export function parseTags(v: string): string[] {
-  return v ? v.split('、') : [];
+  return v
+    .split(/[、,，|｜/／]+/)
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
 export interface ParsedRiddle {

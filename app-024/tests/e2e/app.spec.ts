@@ -100,6 +100,7 @@ test.describe('元宵灯谜库 E2E', () => {
     await page.click('button:has-text("查找")');
     await expect(page.locator('.onsite-current')).toContainText('一口咬掉牛尾巴');
     await page.fill('.onsite-current input.input >> nth=0', '张三');
+    await page.fill('.onsite-current input.input >> nth=1', '13800000000');
     await page.click('button:has-text("✓ 登记猜中")');
     await expect(page.locator('.msg-ok')).toContainText('已登记');
     await expect(page.locator('.stat-ok')).toContainText('1');
@@ -137,15 +138,30 @@ test.describe('元宵灯谜库 E2E', () => {
     await expect(page.locator('.records-table').first()).toContainText('DJ-0001');
   });
 
-  test('导出谜库 CSV（UTF-8 BOM）', async ({ page }) => {
+  test('导出谜库 CSV（UTF-8 BOM，含完整表头）', async ({ page }) => {
     await importSample(page);
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       page.click('button:has-text("导出 CSV")'),
     ]);
     const buf = readFileSync((await download.path())!);
+    const text = buf.toString('utf8');
     expect([buf[0], buf[1], buf[2]]).toEqual([0xef, 0xbb, 0xbf]);
-    expect(buf.toString('utf8')).toContain('一口咬掉牛尾巴,告,猜一字,无格');
+    expect(text).toContain('谜面,谜底,谜目,谜格,作者,出处,难度,适用年龄,标签,备注');
+    expect(text).toContain('一口咬掉牛尾巴,告,猜一字,无格');
+    expect(text.split('\r\n').filter(Boolean)).toHaveLength(TOTAL + 1);
+  });
+
+  test('勾选谜条后只导出选中的 CSV', async ({ page }) => {
+    await importSample(page);
+    await page.locator('.riddle-table tbody tr').first().locator('input[type=checkbox]').check();
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.click('button:has-text("导出 CSV（选中 1）")'),
+    ]);
+    const text = readFileSync((await download.path())!).toString('utf8');
+    expect(text.split('\r\n').filter(Boolean)).toHaveLength(2);
+    expect(text).toContain('一口咬掉牛尾巴,告,猜一字,无格');
   });
 
   test('导出现场登记表 CSV（UTF-8 BOM）', async ({ page }) => {
@@ -153,15 +169,20 @@ test.describe('元宵灯谜库 E2E', () => {
     await page.click('nav >> text=现场登记');
     await page.fill('.onsite-no', '1');
     await page.click('button:has-text("查找")');
+    await page.fill('.onsite-current input.input >> nth=0', '张三');
+    await page.fill('.onsite-current input.input >> nth=1', '13800000000');
     await page.click('button:has-text("✓ 登记猜中")');
+    await page.click('button:has-text("生成兑奖号码")');
     await page.click('button:has-text("导出登记表")');
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       page.click('button:has-text("导出现场登记表 CSV")'),
     ]);
     const buf = readFileSync((await download.path())!);
+    const text = buf.toString('utf8');
     expect(buf[0]).toBe(0xef);
-    expect(buf.toString('utf8')).toContain('谜号,谜面,谜底,猜中者');
+    expect(text).toContain('谜号,谜面,谜底,猜中者,奖项,联系方式,兑奖号码,登记时间,备注');
+    expect(text).toContain('张三,参与奖,13800000000,DJ-0001');
   });
 
   test('哈希深链直达', async ({ page }) => {
